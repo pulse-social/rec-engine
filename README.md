@@ -12,7 +12,7 @@ This repository serves powers the Pulse recommendation engine by:
 Once the vectors are on Pinecone, it is possible to query it for similarity searches.
 
 The idea is that given an Ethereum address, we can fetch their onchain social graph (POAPs they collected,
-casts/publications that they posted and more), profile them and suggest them content that they might like, in a unique
+casts/publications that they posted and more - all thanks to Airstack APIs), profile them and suggest them content that they might like, in a unique
 feed merging Farcaster's and Lens's content. So, given an onchain social graph, we generate users' topics of interest
 through OpenAI and then feed them to the similarity search query on Pinecone.
 
