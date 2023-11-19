@@ -9,7 +9,7 @@ This repository serves powers the Pulse recommendation engine by:
 - generating embeddings for it with Cohere
 - storing vectors on a Pinecone vector database
 
-Once the vectors are on Pinecone, it is possible to query it for similarity searches.
+Once the vectors are on Pinecone, it is possible to query the index for similarity searches.
 
 The idea is that given an Ethereum address, we can fetch their onchain social graph (POAPs they collected,
 casts/publications that they posted and more - all thanks to Airstack APIs), profile them and suggest them content that they might like, in a unique
