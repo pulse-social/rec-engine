@@ -3,11 +3,18 @@ import { init } from '@airstack/node';
 import { fetchPoaps } from './airstack/functions/fetch-poaps.js';
 import { fetchAddressSocialProfiles } from './airstack/functions/fetch-user-socials.js';
 import { UnifiedPost } from './db/types/ex-supabase.js';
-import { getPostsByAuthors, getPostsByIds } from './db/unified-posts.js';
+import { getAlreadyReactedPosts, getPostsByAuthors, getPostsByIds, ReactionType } from './db/unified-posts.js';
 import { queryOpenAI } from './openai.js';
 import { initPineconeIndex, queryPineconeIndex } from './pinecone.js';
 
-export const generateProfileTags = async (address: string): Promise<any> => {
+export const generateProfileQueries = async (
+  address: string,
+  postReactions: {
+    contentId: string;
+    reaction: ReactionType;
+    cleanedText: string;
+  }[]
+): Promise<string> => {
   init(process.env.AIRSTACK_API_KEY!);
   const userSocials = await fetchAddressSocialProfiles(address);
   const farcasterFid = userSocials.find((s) => s.dappName === 'farcaster')?.profileName ?? null;
@@ -21,15 +28,43 @@ export const generateProfileTags = async (address: string): Promise<any> => {
     .map((p) => `Text: ${p.cleaned_text}\n`)
     .join('\n\n')}------\n\nPOAPs Collected (aka event attended):\n${poaps
     .map((p) => `Event Name: ${p.poapEvent.eventName}\n Event Description: ${p.poapEvent.description}`)
-    .join('\n\n')}`;
-  return queryOpenAI(content.substring(0, 10000));
+    .join('\n\n')}------\n\nContent Like: ${postReactions
+    .filter((p) => p.reaction === ReactionType.LIKE)
+    .map((p) => p.cleanedText)
+    .join('---')}\n\nContent Super Liked: ${postReactions
+    .filter((p) => p.reaction === ReactionType.FIRE)
+    .map((p) => p.cleanedText)
+    .join('---')}\n\nContent Disliked/Skipped: ${postReactions
+    .filter((p) => p.reaction === ReactionType.SKIP)
+    .map((p) => p.cleanedText)
+    .join('---')}\n\n`;
+  return queryOpenAI(content);
 };
 
-export const getPostsForYou = async (address: string): Promise<UnifiedPost[]> => {
-  const query = await queryOpenAI(await generateProfileTags(address));
+export const getPostsForYou = async (privyAddress: string, address: string): Promise<UnifiedPost[]> => {
+  const postReactions = await getAlreadyReactedPosts(privyAddress, 500);
+  const query = await queryOpenAI(
+    await generateProfileQueries(
+      address,
+      // eslint-disable-next-line camelcase
+      postReactions.map((p: { content_id: { content_id: string; cleaned_text: string }; reaction: ReactionType }) => ({
+        contentId: p.content_id.content_id,
+        reaction: p.reaction,
+        cleanedText: p.content_id.cleaned_text,
+      }))
+    )
+  );
   try {
     const pineconeIndex = await initPineconeIndex('posts');
-    const result = await queryPineconeIndex(pineconeIndex, [query.replace(/["'\\]/g, '').trim()]);
+    const result = await queryPineconeIndex(
+      pineconeIndex,
+      [query.replace(/["'\\]/g, '').trim()],
+      postReactions.map(
+        // eslint-disable-next-line camelcase
+        (p: { content_id: { content_id: string; cleaned_text: string }; reaction: ReactionType }) =>
+          p.content_id.content_id
+      )
+    );
     if (result?.matches.length > 0) {
       return await getPostsByIds(result.matches.map((r) => r.id));
     }

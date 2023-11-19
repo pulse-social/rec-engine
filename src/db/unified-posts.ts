@@ -1,13 +1,32 @@
 import supabase from './index.js';
-import { UnifiedPost } from './types/ex-supabase.js';
+import {UnifiedPost} from './types/ex-supabase';
+
+export enum ReactionType {
+  SKIP = "SKIP",
+  LIKE = "LIKE",
+  FIRE = "FIRE"
+}
+
+export const getAlreadyReactedPosts = async (address: string, limit = 100, page = 0): Promise<any> => {
+  const {data, error} = await supabase
+      .from('reactions')
+      .select('address,content_id:unified_posts!inner(content_id,cleaned_text),reaction').eq("address", address)
+      .range(page * limit, (page + 1) * limit - 1)
+      .limit(limit);
+  if (error) {
+    console.error(error);
+    throw error;
+  }
+  return data ?? [];
+};
 
 export const getPosts = async (limit = 100, page = 0): Promise<UnifiedPost[]> => {
-  const { data, error } = await supabase
-    .from('unified_posts')
-    .select('*')
-    .order('publish_date', { ascending: false })
-    .range(page * limit, (page + 1) * limit - 1)
-    .limit(limit);
+  const {data, error} = await supabase
+      .from('unified_posts')
+      .select('*')
+      .order('publish_date', {ascending: false})
+      .range(page * limit, (page + 1) * limit - 1)
+      .limit(limit);
   if (error) {
     console.error(error);
     throw error;
