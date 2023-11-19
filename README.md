@@ -19,4 +19,4 @@ through OpenAI and then feed them to the similarity search query on Pinecone.
 
 _** Posts are not yet being synchronized in realtime for the sake of the hackathon. Both Farcaster's and Lens's data are
 a snapshot taken on Friday 17/11/2023 evening counting around 2.2M posts in total. Of all the posts, we had time to
-generate embeddings and store them on Pinecone for only around 200k of them._
+generate embeddings and store them on Pinecone for only around 170k of them._
